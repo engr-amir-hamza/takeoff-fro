@@ -18,13 +18,7 @@ const els = {
   pageList: document.getElementById('pageList'),
   takeoffList: document.getElementById('takeoffList'),
   exportCsvBtn: document.getElementById('exportCsvBtn'),
-  exportXlsxBtn: document.getElementById('exportXlsxBtn'),
-  toggleBookmarksBtn: document.getElementById('toggleBookmarksBtn'),
-  bookmarksPane: document.getElementById('bookmarksPane'),
-  loader: document.getElementById('loader'),
-  scalePresetSelect: document.getElementById('scalePresetSelect'),
-  dpiInput: document.getElementById('dpiInput'),
-  applyScaleBtn: document.getElementById('applyScaleBtn')
+  exportXlsxBtn: document.getElementById('exportXlsxBtn')
 };
 
 const viewer = new Viewer(document.getElementById('viewerCanvas'), (msg) => {
@@ -36,24 +30,11 @@ let project = null;
 let sourceFile = null;
 
 viewer.onTakeoffAdded = () => renderTakeoffs();
-viewer.onTakeoffSelected = () => renderTakeoffs();
-
-function setLoading(loading, message = 'Loading…') {
-  els.loader.classList.toggle('hidden', !loading);
-  els.loader.textContent = message;
-}
 
 function setToolButtons(active) {
   document.querySelectorAll('[data-tool]').forEach((btn) => {
     btn.style.outline = btn.dataset.tool === active ? '2px solid #00bcd4' : 'none';
   });
-}
-
-function parseScalePreset(value) {
-  if (!value.includes('/')) return null;
-  const [num, den] = value.split('/').map(Number);
-  if (!num || !den) return null;
-  return num / den;
 }
 
 function renderPages() {
@@ -82,25 +63,10 @@ function renderTakeoffs() {
   if (!project) return;
   els.takeoffList.innerHTML = '';
   project.takeoffs = viewer.takeoffs;
-
   for (const item of viewer.takeoffs) {
     const li = document.createElement('li');
-    li.className = `takeoff-item ${viewer.selectedTakeoffId === item.id ? 'selected' : ''}`;
-    li.style.borderLeftColor = item.color;
-
-    const title = document.createElement('input');
-    title.value = item.label;
-    title.onchange = () => {
-      viewer.renameTakeoff(item.id, title.value.trim());
-      renderTakeoffs();
-    };
-
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    meta.textContent = `${item.type} | Pg ${item.page + 1} | ${item.value.toFixed(2)} ${item.units}`;
-
-    li.onclick = () => viewer.selectTakeoff(item.id);
-    li.append(title, meta);
+    li.textContent = `${item.label} | ${item.type} | Pg ${item.page + 1} | ${item.value.toFixed(2)} ${item.units}`;
+    li.style.color = item.color;
     els.takeoffList.append(li);
   }
 }
@@ -114,20 +80,15 @@ function bind() {
   els.fileInput.onchange = async (e) => {
     sourceFile = e.target.files?.[0];
     if (!sourceFile) return;
-    setLoading(true, 'Loading file…');
-    try {
-      const pages = await loadPagesFromFile(sourceFile, (progress) => setLoading(true, progress));
-      project = createProjectMeta(sourceFile.name, sourceFile.type);
-      project.pages = pages.map((p) => ({ width: p.width, height: p.height }));
-      viewer.setPages(pages);
-      viewer.setTakeoffs([]);
-      viewer.setCalibrationByPage({});
-      renderPages();
-      renderTakeoffs();
-      updateStatus(`Loaded ${sourceFile.name} (${pages.length} page(s))`);
-    } finally {
-      setLoading(false);
-    }
+    const pages = await loadPagesFromFile(sourceFile);
+    project = createProjectMeta(sourceFile.name, sourceFile.type);
+    project.pages = pages.map((p) => ({ width: p.width, height: p.height }));
+    viewer.setPages(pages);
+    viewer.setTakeoffs([]);
+    viewer.setCalibrationByPage({});
+    renderPages();
+    renderTakeoffs();
+    updateStatus(`Loaded ${sourceFile.name} (${pages.length} page(s))`);
   };
 
   document.querySelectorAll('[data-tool]').forEach((btn) => {
@@ -144,24 +105,6 @@ function bind() {
 
   els.itemColorInput.oninput = () => viewer.setCurrentStyle({ color: els.itemColorInput.value, label: els.itemLabelInput.value });
   els.itemLabelInput.oninput = () => viewer.setCurrentStyle({ color: els.itemColorInput.value, label: els.itemLabelInput.value });
-  viewer.setCurrentStyle({ color: els.itemColorInput.value, label: els.itemLabelInput.value });
-
-  els.applyScaleBtn.onclick = () => {
-    const ratioInchesPerFoot = parseScalePreset(els.scalePresetSelect.value);
-    const dpi = Number(els.dpiInput.value);
-    if (!ratioInchesPerFoot || !dpi) {
-      updateStatus('Choose a preset scale and valid DPI');
-      return;
-    }
-    const pixelsPerFoot = dpi * ratioInchesPerFoot;
-    viewer.applyPixelsPerUnit(pixelsPerFoot);
-    updateStatus(`Preset scale applied (${els.scalePresetSelect.value}, ${dpi} DPI)`);
-  };
-
-  els.toggleBookmarksBtn.onclick = () => {
-    const collapsed = els.bookmarksPane.classList.toggle('collapsed');
-    els.toggleBookmarksBtn.textContent = collapsed ? 'Show Bookmarks' : 'Hide Bookmarks';
-  };
 
   els.saveProjectBtn.onclick = async () => {
     if (!project) return;
@@ -177,23 +120,18 @@ function bind() {
   };
 
   els.loadProjectBtn.onclick = async () => {
-    setLoading(true, 'Loading saved project…');
-    try {
-      const loaded = await loadLatestProject();
-      if (!loaded) return updateStatus('No saved project found');
-      const file = new File([loaded.sourceBuffer], loaded.fileName, { type: loaded.fileType || 'application/octet-stream' });
-      sourceFile = file;
-      const pages = await loadPagesFromFile(file, (progress) => setLoading(true, progress));
-      project = loaded;
-      viewer.setPages(pages);
-      viewer.setTakeoffs(loaded.takeoffs || []);
-      viewer.setCalibrationByPage(loaded.calibrationByPage || {});
-      renderPages();
-      renderTakeoffs();
-      updateStatus(`Loaded project: ${loaded.fileName}`);
-    } finally {
-      setLoading(false);
-    }
+    const loaded = await loadLatestProject();
+    if (!loaded) return updateStatus('No saved project found');
+    const file = new File([loaded.sourceBuffer], loaded.fileName, { type: loaded.fileType || 'application/octet-stream' });
+    sourceFile = file;
+    const pages = await loadPagesFromFile(file);
+    project = loaded;
+    viewer.setPages(pages);
+    viewer.setTakeoffs(loaded.takeoffs || []);
+    viewer.setCalibrationByPage(loaded.calibrationByPage || {});
+    renderPages();
+    renderTakeoffs();
+    updateStatus(`Loaded project: ${loaded.fileName}`);
   };
 
   els.exportCsvBtn.onclick = () => exportCsv(viewer.takeoffs);

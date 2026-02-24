@@ -6,17 +6,13 @@ Takeoff Fro is a lightweight, local-first construction takeoff app built for fas
 
 - Load PDF plans (multi-page) and image files (PNG/JPG)
 - High-performance canvas viewer with smooth pan/zoom
-- Right-side bookmark pane with hide/reveal toggle
-- Loading overlay with progress text while plans render
-- Scale setup options:
-  - Manual two-point calibration
-  - Standard architectural scale presets (DPI-based approximation)
+- Scale calibration by two-point reference
 - Measurement tools:
   - Linear takeoff (multi-point polyline)
   - Area takeoff (polygon)
   - Count takeoff (point markers)
-- Select tool with visual highlight for selected takeoff
-- Name takeoffs in the side list (editable per item)
+- Per-item metadata: name, type, page, value, units, color
+- Bookmark-style page navigation with thumbnails
 - Local project save/load via IndexedDB
 - Export results to CSV and Excel (.xlsx)
 
@@ -48,17 +44,16 @@ Open `index.html` with Live Server.
 
 1. Click **Load PDF/Image** and choose a plan file.
 2. Use **Pan** + mouse drag and wheel zoom for navigation.
-3. Set scale:
-   - **Calibrate** tool for exact two-point field scale.
-   - Or choose a preset and DPI then **Apply Preset Scale** (approximation).
+3. Set scale with **Calibrate**:
+   - Click two points on known distance.
+   - Enter the real-world distance.
 4. Choose a measurement tool:
    - **Length**: click points, then double-click (or Enter) to complete.
    - **Area**: click polygon vertices, then double-click (or Enter) to complete.
    - **Count**: click each marker to increment count items.
-5. Use **Select** to click an existing takeoff and highlight it.
-6. Rename takeoffs directly in the takeoff list inputs.
-7. Save with **Save Project** (IndexedDB).
-8. Export with **Export CSV** or **Export Excel**.
+5. Set item label and color before drawing to organize takeoffs.
+6. Save with **Save Project** (IndexedDB).
+7. Export with **Export CSV** or **Export Excel**.
 
 ## Project Structure
 
@@ -75,5 +70,5 @@ Open `index.html` with Live Server.
 ## Notes
 
 - PDF pages are rasterized into canvas pages for faster pan/zoom redraw.
-- Preset scales are intentionally approximate and depend on your DPI assumption.
+- Accuracy depends on calibration and source plan quality.
 - Data stays local in the browser storage.

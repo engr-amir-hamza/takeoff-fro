@@ -1,29 +1,5 @@
 import { Tool } from './models.js';
-import { dist, polylineLength, polygonArea } from './math.js';
-
-function distanceToSegment(p, a, b) {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const l2 = dx * dx + dy * dy;
-  if (l2 === 0) return dist(p, a);
-  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2;
-  t = Math.max(0, Math.min(1, t));
-  return dist(p, { x: a.x + t * dx, y: a.y + t * dy });
-}
-
-function pointInPolygon(point, polygon) {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i].x;
-    const yi = polygon[i].y;
-    const xj = polygon[j].x;
-    const yj = polygon[j].y;
-    const intersects = ((yi > point.y) !== (yj > point.y)) &&
-      (point.x < (xj - xi) * (point.y - yi) / ((yj - yi) || 0.00001) + xi);
-    if (intersects) inside = !inside;
-  }
-  return inside;
-}
+import { polylineLength, polygonArea } from './math.js';
 
 export class Viewer {
   constructor(canvas, onStatus) {
@@ -41,7 +17,6 @@ export class Viewer {
     this.takeoffs = [];
     this.calibrationByPage = {};
     this.currentStyle = { color: '#00bcd4', label: 'Item' };
-    this.selectedTakeoffId = null;
 
     this.resize();
     this.bind();
@@ -107,25 +82,6 @@ export class Viewer {
     this.draw();
   }
 
-  selectTakeoff(id) {
-    this.selectedTakeoffId = id;
-    this.onTakeoffSelected?.(id);
-    this.draw();
-  }
-
-  renameTakeoff(id, label) {
-    const item = this.takeoffs.find((t) => t.id === id);
-    if (!item) return;
-    item.label = label || item.label;
-    this.draw();
-  }
-
-  applyPixelsPerUnit(pixelsPerUnit) {
-    if (!pixelsPerUnit || pixelsPerUnit <= 0) return;
-    this.calibrationByPage[this.pageIndex] = { pixelsPerUnit };
-    this.onStatus(`Scale set: 1 unit = ${pixelsPerUnit.toFixed(3)} px`);
-  }
-
   toWorld(x, y) {
     return { x: (x - this.offset.x) / this.zoom, y: (y - this.offset.y) / this.zoom };
   }
@@ -151,32 +107,8 @@ export class Viewer {
     this.draw();
   }
 
-  pickTakeoff(point) {
-    const onPage = this.takeoffs.filter((t) => t.page === this.pageIndex);
-    const threshold = 8 / this.zoom;
-    for (let i = onPage.length - 1; i >= 0; i -= 1) {
-      const item = onPage[i];
-      if (item.type === Tool.COUNT && dist(point, item.points[0]) <= threshold) return item;
-      if (item.type === Tool.LENGTH) {
-        for (let j = 1; j < item.points.length; j += 1) {
-          if (distanceToSegment(point, item.points[j - 1], item.points[j]) <= threshold) return item;
-        }
-      }
-      if (item.type === Tool.AREA) {
-        if (pointInPolygon(point, item.points)) return item;
-      }
-    }
-    return null;
-  }
-
   onPointerDown(e) {
     const point = this.toWorld(e.offsetX, e.offsetY);
-    if (this.tool === Tool.SELECT) {
-      const hit = this.pickTakeoff(point);
-      this.selectTakeoff(hit?.id || null);
-      this.onStatus(hit ? `Selected: ${hit.label}` : 'Nothing selected');
-      return;
-    }
     if (this.tool === Tool.PAN) {
       this.dragging = true;
       this.lastMouse = { x: e.offsetX, y: e.offsetY };
@@ -236,7 +168,6 @@ export class Viewer {
       ...base
     };
     this.takeoffs.push(item);
-    this.selectTakeoff(item.id);
     this.onTakeoffAdded?.(item, this.takeoffs);
     this.draw();
   }
@@ -261,25 +192,17 @@ export class Viewer {
     };
 
     for (const item of this.takeoffs.filter((t) => t.page === this.pageIndex)) {
-      const isSelected = item.id === this.selectedTakeoffId;
       this.ctx.strokeStyle = item.color;
       this.ctx.fillStyle = item.color;
-      this.ctx.lineWidth = (isSelected ? 4 : 2) / this.zoom;
-      if (isSelected && item.type !== Tool.COUNT) {
-        this.ctx.shadowColor = '#ffd166';
-        this.ctx.shadowBlur = 12 / this.zoom;
-      } else {
-        this.ctx.shadowBlur = 0;
-      }
-
+      this.ctx.lineWidth = 2 / this.zoom;
       if (item.type === Tool.COUNT) {
         const p = item.points[0];
         this.ctx.beginPath();
-        this.ctx.arc(p.x, p.y, (isSelected ? 8 : 5) / this.zoom, 0, Math.PI * 2);
+        this.ctx.arc(p.x, p.y, 5 / this.zoom, 0, Math.PI * 2);
         this.ctx.fill();
       } else if (item.type === Tool.AREA) {
         drawPoints(item.points, true);
-        this.ctx.globalAlpha = isSelected ? 0.28 : 0.15;
+        this.ctx.globalAlpha = 0.15;
         this.ctx.fill();
         this.ctx.globalAlpha = 1;
       } else {
