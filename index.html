@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Takeoff Fro</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <h1>Takeoff Fro</h1>
+      <div class="section">
+        <label class="file-label">
+          <span>Load PDF/Image</span>
+          <input id="fileInput" type="file" accept="application/pdf,image/*" />
+        </label>
+        <button id="saveProjectBtn">Save Project</button>
+        <button id="loadProjectBtn">Load Project</button>
+      </div>
+
+      <div class="section">
+        <h2>Tools</h2>
+        <div class="tool-grid">
+          <button data-tool="pan">Pan</button>
+          <button data-tool="calibrate">Calibrate</button>
+          <button data-tool="length">Length</button>
+          <button data-tool="area">Area</button>
+          <button data-tool="count">Count</button>
+          <button data-tool="select">Select</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Zoom</h2>
+        <div class="zoom-row">
+          <button id="zoomOutBtn">-</button>
+          <span id="zoomLabel">100%</span>
+          <button id="zoomInBtn">+</button>
+          <button id="fitBtn">Fit</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Current Item</h2>
+        <input id="itemLabelInput" type="text" placeholder="Item label" />
+        <input id="itemColorInput" type="color" value="#00bcd4" />
+      </div>
+
+      <div class="section">
+        <h2>Pages</h2>
+        <div id="pageList" class="page-list"></div>
+      </div>
+
+      <div class="section">
+        <h2>Takeoffs</h2>
+        <ul id="takeoffList" class="takeoff-list"></ul>
+      </div>
+
+      <div class="section">
+        <h2>Export</h2>
+        <button id="exportCsvBtn">Export CSV</button>
+        <button id="exportXlsxBtn">Export Excel</button>
+      </div>
+    </aside>
+
+    <main class="viewer-shell">
+      <canvas id="viewerCanvas"></canvas>
+      <div id="statusBar" class="status-bar">Load a plan to start.</div>
+    </main>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
